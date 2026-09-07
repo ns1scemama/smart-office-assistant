@@ -1,0 +1,236 @@
+{
+  "name": "SOA - Workflow A (POST process-document)",
+  "nodes": [
+    {
+      "id": "wa1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "process-document",
+        "responseMode": "responseNode",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "webhookId": "ff0f29e2-d945-45b8-9dd8-f3ba6dfeed23"
+    },
+    {
+      "id": "wa2",
+      "name": "ValidateType",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "or",
+          "conditions": [
+            {
+              "id": "v1",
+              "leftValue": "={{ $json.body.mime_type }}",
+              "rightValue": "application/pdf",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "v2",
+              "leftValue": "={{ $json.body.mime_type }}",
+              "rightValue": "text/plain",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "v3",
+              "leftValue": "={{ $json.body.mime_type }}",
+              "rightValue": "wordprocessingml.document",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wa3",
+      "name": "ConvertToFile",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        -100
+      ],
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "body.file_base64",
+        "options": {
+          "fileName": "={{ $json.body.file_name }}",
+          "mimeType": "={{ $json.body.mime_type }}"
+        }
+      }
+    },
+    {
+      "id": "wa4",
+      "name": "UploadToProcessed",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        660,
+        -100
+      ],
+      "parameters": {
+        "name": "={{ $('Webhook').item.json.body.file_name }}",
+        "driveId": {
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1LORFJgwyrPaFb_ztvPOUHolbep2cABEk"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wa5",
+      "name": "ProcessDocument",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        -100
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "WUhcBFBk96kP2NWU"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "fileId": "={{ $json.id }}",
+            "fileName": "={{ $('Webhook').item.json.body.file_name }}",
+            "mimeType": "={{ $('Webhook').item.json.body.mime_type }}"
+          }
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wa6",
+      "name": "RespondSuccess",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        -100
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "wa7",
+      "name": "RespondUnsupported",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        120
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({status:'error',error_code:'UNSUPPORTED_FILE_TYPE',message:'Only PDF, DOCX and TXT files can be processed.'}) }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "ValidateType",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ValidateType": {
+      "main": [
+        [
+          {
+            "node": "ConvertToFile",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "RespondUnsupported",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ConvertToFile": {
+      "main": [
+        [
+          {
+            "node": "UploadToProcessed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UploadToProcessed": {
+      "main": [
+        [
+          {
+            "node": "ProcessDocument",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ProcessDocument": {
+      "main": [
+        [
+          {
+            "node": "RespondSuccess",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

@@ -1,0 +1,110 @@
+{
+  "name": "SOA - Workflow B (GET documents)",
+  "nodes": [
+    {
+      "id": "wb1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "documents",
+        "responseMode": "responseNode",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "webhookId": "27df03b4-393c-4109-b0f2-8c3d84b07dba"
+    },
+    {
+      "id": "wb2",
+      "name": "ReadSheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1-wNrfKkwANaEDGTggNHwNaXIZDgQDmzYtn_wmB4CIMU"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "גיליון1"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wb3",
+      "name": "MapRows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\nconst out = rows.filter(r => r['Document ID']).map(r => ({\n  document_id: r['Document ID'],\n  received_at: r['Received At'],\n  file_name: r['File Name'],\n  file_link: r['File Link'],\n  document_type: r['Document Type'],\n  sender_or_company: r['Sender / Company'],\n  summary: r['Summary'],\n  requested_action: r['Requested Action'],\n  deadline: r['Deadline'],\n  urgency: r['Urgency'],\n  department: r['Department'],\n  status: r['Status'] || 'Processed',\n  reviewed_by: r['Reviewed By'] || '',\n  review_note: r['Review Note'] || ''\n}));\nreturn [{ json: { documents: out } }];"
+      }
+    },
+    {
+      "id": "wb4",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.documents) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "ReadSheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ReadSheet": {
+      "main": [
+        [
+          {
+            "node": "MapRows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MapRows": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

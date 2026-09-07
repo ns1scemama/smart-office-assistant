@@ -1,0 +1,200 @@
+:root {
+  --bg: #f7f7f5;
+  --card: #ffffff;
+  --border: #e2e2df;
+  --text: #23241f;
+  --muted: #6b6d66;
+  --accent: #2f5d50;
+  --accent-hover: #244b40;
+  --danger: #b3261e;
+  --high-bg: #fdecea;
+  --high-fg: #b3261e;
+  --medium-bg: #fff4e0;
+  --medium-fg: #8a5a00;
+  --low-bg: #eaf3ea;
+  --low-fg: #2f5d50;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app-shell {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+.top-nav {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+
+.top-nav button {
+  background: none;
+  border: none;
+  font-size: 15px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.top-nav button.active {
+  background: var(--accent);
+  color: white;
+}
+
+h1 { font-size: 22px; margin: 0 0 4px; }
+.subtitle { color: var(--muted); margin-bottom: 24px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.dropzone.dragover { border-color: var(--accent); color: var(--accent); }
+.dropzone input { display: none; }
+
+.file-picked {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--bg);
+  border-radius: 8px;
+}
+
+button.primary {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+  margin-top: 16px;
+}
+button.primary:hover:not(:disabled) { background: var(--accent-hover); }
+button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+button.secondary {
+  background: none;
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.message {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.message.error { background: var(--high-bg); color: var(--high-fg); }
+.message.info { background: var(--low-bg); color: var(--low-fg); }
+
+.processing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  color: var(--accent);
+}
+.spinner {
+  width: 18px; height: 18px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.result-card { margin-top: 20px; }
+.result-field { margin-bottom: 10px; }
+.result-field .label { font-size: 12px; color: var(--muted); }
+.result-field .value { font-size: 15px; }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.badge.High { background: var(--high-bg); color: var(--high-fg); }
+.badge.Medium { background: var(--medium-bg); color: var(--medium-fg); }
+.badge.Low { background: var(--low-bg); color: var(--low-fg); }
+.badge .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.filters input, .filters select {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+table { width: 100%; border-collapse: collapse; }
+th, td {
+  text-align: right;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+th { color: var(--muted); font-weight: 600; }
+tr.clickable { cursor: pointer; }
+tr.clickable:hover { background: var(--bg); }
+
+.table-scroll { overflow-x: auto; }
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+}
+
+.detail-actions {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 60px;
+}
