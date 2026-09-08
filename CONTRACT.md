@@ -1,9 +1,9 @@
-# CONTRACT.md — Application ↔ n8n Data Contract
+# CONTRACT.md: Application to n8n Data Contract
 
 This is the single source of truth for the shape of every request and response
 between the application and the n8n workflows. If a field name changes, it
 changes here first, then in n8n, then in the application. Never guess a field
-name — check this file.
+name. Check this file.
 
 Allowed values for `document_type`, `urgency`, and `department` come from
 Part 1 of the course project and must never be translated, renamed, or
@@ -63,7 +63,7 @@ extended by the application.
 | UNSUPPORTED_FILE_TYPE | The MIME type is not PDF, DOCX, or TXT | Inline message on the upload screen; the file is not sent again |
 | EMPTY_DOCUMENT | Text extraction produced nothing (e.g. a scanned image) | Explain that the document has no readable text and suggest a different file |
 | EXTRACTION_FAILED | The AI step failed or returned unusable output | Offer a Retry button; the file is kept in the form |
-| UNAUTHORIZED | Missing or wrong secret header | A configuration error message — not something the end user can fix |
+| UNAUTHORIZED | Missing or wrong secret header | A configuration error message, not something the end user can fix |
 
 ---
 
@@ -116,7 +116,7 @@ Returns HTTP 404 when no matching row exists for `document_id`.
 ## Contract Discipline
 
 Missing information arrives as `"Not found"` or `"No action found"` and must
-be displayed as such — never hidden, never replaced with a guess.
+be displayed as such, never hidden and never replaced with a guess.
 
 The application never calls an AI model, never writes to Google Sheets, never
 sends email, and never decides what "urgent" means. It only calls these three
