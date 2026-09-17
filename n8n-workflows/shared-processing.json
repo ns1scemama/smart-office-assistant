@@ -372,6 +372,12 @@
               "name": "department",
               "type": "string",
               "value": "={{ $json.output.department }}"
+            },
+            {
+              "id": "r12",
+              "name": "status",
+              "type": "string",
+              "value": "={{ [$json.output.sender_or_company, $json.output.requested_action, $json.output.deadline, $json.output.document_type].filter(v => !v || ['not found','no action found',''].includes(String(v).toLowerCase())).length >= 2 ? 'Needs Review' : 'Processed' }}"
             }
           ]
         },
@@ -413,7 +419,7 @@
             "Deadline": "={{ $json.deadline }}",
             "Urgency": "={{ $json.urgency }}",
             "Department": "={{ $json.department }}",
-            "Status": "Processed",
+            "Status": "={{ $json.status }}",
             "Document ID": "={{ $json.document_id }}"
           },
           "matchingColumns": [
