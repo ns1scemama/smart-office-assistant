@@ -50,8 +50,17 @@ n8n הוא המנוע.
 
 ```bash
 npm install
-cp .env.example .env      # ואז למלא את הערכים האמיתיים
 npm run dev
+```
+
+**זה עובד מיד, בלי שום הגדרה.** בהיעדר `.env` השרת עולה במצב mock ומגיש נתוני
+דוגמה, כך שאפשר לראות את כל הממשק לפני שמחברים שום דבר. כדי לעבוד מול n8n
+אמיתי, העתק את `.env.example` ל-`.env` ומלא את הערכים.
+
+בדיקת שלוש נקודות הקצה בפקודה אחת:
+
+```bash
+npm run smoke
 ```
 
 הפקודה מריצה יחד את שרת ה־Express (פורט 3001) ואת Vite (פורט 5173).
@@ -85,7 +94,12 @@ smart-office-assistant/
     screens/DocumentDetail.jsx F6: פירוט מלא + סימון כנבדק
     screens/UrgencyBadge.jsx   תג דחיפות: תווית + צבע, לא צבע בלבד
     App.jsx                    ניווט בין שלושת המסכים
-  n8n-workflows/               ייצוא JSON של חמש הזרימות, בלי credentials
+  scripts/smoke.js             בדיקת עשן לשלוש נקודות הקצה
+  n8n-workflows/               ייצוא JSON של הזרימות, בלי credentials
+    part1-standalone.json      חלק 1 כזרימה אחת רציפה, 18 צמתים
+    part1-drive-trigger.json   חלק 1 אחרי הריפקטור, קורא לתת-הזרימה
+    shared-processing.json     הלוגיקה המשותפת לשתי נקודות הכניסה
+    workflow-a/b/c-*.json      שלוש נקודות הקצה של חלק 2
   SPEC.md  CONTRACT.md  PROMPTS.md  README.md
 ```
 

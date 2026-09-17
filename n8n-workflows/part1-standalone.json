@@ -1,0 +1,885 @@
+{
+  "name": "Smart Office Assistant - Part 1 (standalone, all nodes inline)",
+  "nodes": [
+    {
+      "id": "trig1",
+      "name": "New File in Incoming",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1LdxGtYvjbxoO4SQJNOM4tc62_oOfvL9o"
+        },
+        "event": "fileCreated"
+      }
+    },
+    {
+      "id": "route1",
+      "name": "RouteByType",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('New File in Incoming').item.json.mimeType }}",
+                    "rightValue": "wordprocessingml.document",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ]
+              },
+              "outputKey": "docx"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('New File in Incoming').item.json.mimeType }}",
+                    "rightValue": "application/pdf",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "outputKey": "pdf"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('New File in Incoming').item.json.mimeType }}",
+                    "rightValue": "text/plain",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "outputKey": "text"
+            }
+          ]
+        },
+        "fallbackOutput": "none",
+        "options": {}
+      }
+    },
+    {
+      "id": "copygdoc",
+      "name": "CopyAsGoogleDoc",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $('New File in Incoming').item.json.id }}/copy",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"mimeType\":\"application/vnd.google-apps.document\",\"name\":\"_tmp_soa_convert\"}",
+        "options": {}
+      }
+    },
+    {
+      "id": "exportconv",
+      "name": "ExportConvertedText",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        100
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.id }}/export",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "mimeType",
+              "value": "text/plain"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "deltemp",
+      "name": "DeleteTempCopy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        100
+      ],
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $('CopyAsGoogleDoc').item.json.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {}
+      }
+    },
+    {
+      "id": "settextdocx",
+      "name": "SetTextDocx",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        100
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d1",
+              "name": "text",
+              "type": "string",
+              "value": "={{ $('ExportConvertedText').item.json.data || $('ExportConvertedText').item.json }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "dlpdf",
+      "name": "DownloadPdf",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('New File in Incoming').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "extpdf",
+      "name": "ExtractPdf",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ],
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "data",
+        "options": {
+          "destinationKey": "text"
+        }
+      }
+    },
+    {
+      "id": "dltext",
+      "name": "DownloadTextFile",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        460,
+        500
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('New File in Incoming').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "exttext",
+      "name": "ExtractText",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        680,
+        500
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "data",
+        "options": {
+          "destinationKey": "text"
+        }
+      }
+    },
+    {
+      "id": "infoextract",
+      "name": "Information Extractor",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1,
+      "position": [
+        980,
+        300
+      ],
+      "parameters": {
+        "text": "={{ $json.text || $json.data }}",
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\"document_type\": \"invoice\", \"sender_or_company\": \"Not found\", \"summary\": \"Short summary of the document in up to three sentences.\", \"requested_action\": \"No action found\", \"deadline\": \"Not found\", \"urgency\": \"Low\", \"department\": \"General\"}",
+        "options": {
+          "systemPromptTemplate": "Read the document like an office assistant. Extract only information that appears in the document. Do not invent missing details.\ndocument_type must be exactly one of: invoice, request, report, complaint, contract, quote, other.\nsender_or_company: name of the person or organization, or the exact text Not found if absent.\nsummary: up to three short sentences.\nrequested_action: what the company should do next, or the exact text No action found if absent.\ndeadline: exactly as written in the document, or the exact text Not found if absent.\nurgency must be exactly one of: Low, Medium, High. Use High only when there is an immediate deadline, payment risk, legal or safety risk, or an explicit urgent request.\ndepartment must be exactly one of: Sales, Finance, Support, HR, Management, General."
+        }
+      }
+    },
+    {
+      "id": "claude1",
+      "name": "Claude",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        980,
+        500
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5",
+          "cachedResultName": "claude-sonnet-5"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "buildresult",
+      "name": "BuildResult",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1220,
+        300
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "document_id",
+              "type": "string",
+              "value": "={{ 'exec-' + $execution.id }}"
+            },
+            {
+              "id": "r2",
+              "name": "file_name",
+              "type": "string",
+              "value": "={{ $('New File in Incoming').item.json.name }}"
+            },
+            {
+              "id": "r3",
+              "name": "file_link",
+              "type": "string",
+              "value": "={{ 'https://drive.google.com/file/d/' + $('New File in Incoming').item.json.id + '/view' }}"
+            },
+            {
+              "id": "r4",
+              "name": "received_at",
+              "type": "string",
+              "value": "={{ $now.toISO() }}"
+            },
+            {
+              "id": "r5",
+              "name": "document_type",
+              "type": "string",
+              "value": "={{ $json.output.document_type }}"
+            },
+            {
+              "id": "r6",
+              "name": "sender_or_company",
+              "type": "string",
+              "value": "={{ $json.output.sender_or_company }}"
+            },
+            {
+              "id": "r7",
+              "name": "summary",
+              "type": "string",
+              "value": "={{ $json.output.summary }}"
+            },
+            {
+              "id": "r8",
+              "name": "requested_action",
+              "type": "string",
+              "value": "={{ $json.output.requested_action }}"
+            },
+            {
+              "id": "r9",
+              "name": "deadline",
+              "type": "string",
+              "value": "={{ $json.output.deadline }}"
+            },
+            {
+              "id": "r10",
+              "name": "urgency",
+              "type": "string",
+              "value": "={{ $json.output.urgency }}"
+            },
+            {
+              "id": "r11",
+              "name": "department",
+              "type": "string",
+              "value": "={{ $json.output.department }}"
+            },
+            {
+              "id": "r12",
+              "name": "status",
+              "type": "string",
+              "value": "={{ [$json.output.sender_or_company, $json.output.requested_action, $json.output.deadline, $json.output.document_type].filter(v => !v || ['not found','no action found',''].includes(String(v).toLowerCase())).length >= 2 ? 'Needs Review' : 'Processed' }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "sheetsappend",
+      "name": "AppendRow",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1440,
+        300
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1-wNrfKkwANaEDGTggNHwNaXIZDgQDmzYtn_wmB4CIMU"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "גיליון1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Received At": "={{ $json.received_at }}",
+            "File Name": "={{ $json.file_name }}",
+            "File Link": "={{ $json.file_link }}",
+            "Document Type": "={{ $json.document_type }}",
+            "Sender / Company": "={{ $json.sender_or_company }}",
+            "Summary": "={{ $json.summary }}",
+            "Requested Action": "={{ $json.requested_action }}",
+            "Deadline": "={{ $json.deadline }}",
+            "Urgency": "={{ $json.urgency }}",
+            "Department": "={{ $json.department }}",
+            "Status": "={{ $json.status }}",
+            "Document ID": "={{ $json.document_id }}"
+          },
+          "matchingColumns": [
+            "Document ID"
+          ],
+          "schema": [
+            {
+              "id": "Received At",
+              "displayName": "Received At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "File Name",
+              "displayName": "File Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "File Link",
+              "displayName": "File Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Document Type",
+              "displayName": "Document Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Sender / Company",
+              "displayName": "Sender / Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Requested Action",
+              "displayName": "Requested Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Deadline",
+              "displayName": "Deadline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Urgency",
+              "displayName": "Urgency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Department",
+              "displayName": "Department",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Document ID",
+              "displayName": "Document ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Reviewed By",
+              "displayName": "Reviewed By",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Review Note",
+              "displayName": "Review Note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ifurgent",
+      "name": "CheckUrgency",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1660,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $('BuildResult').item.json.urgency }}",
+              "rightValue": "High",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "gmailurgent",
+      "name": "GmailUrgent",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1880,
+        200
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "netanel@e-effective.co.il",
+        "subject": "=URGENT: {{ $('BuildResult').item.json.document_type }} from {{ $('BuildResult').item.json.sender_or_company }}",
+        "emailType": "text",
+        "message": "=A new urgent document was processed.\n\nFile: {{ $('BuildResult').item.json.file_name }}\nSender/Company: {{ $('BuildResult').item.json.sender_or_company }}\nSummary: {{ $('BuildResult').item.json.summary }}\nRequested action: {{ $('BuildResult').item.json.requested_action }}\nDeadline: {{ $('BuildResult').item.json.deadline }}\nUrgency: {{ $('BuildResult').item.json.urgency }}\nDepartment: {{ $('BuildResult').item.json.department }}\nDrive link: {{ $('BuildResult').item.json.file_link }}",
+        "options": {}
+      },
+      "webhookId": "0a9c57cf-1719-4811-8283-8b54c2a7fd06"
+    },
+    {
+      "id": "gmailnormal",
+      "name": "GmailNormal",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1880,
+        400
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "netanel@e-effective.co.il",
+        "subject": "=Document processed: {{ $('BuildResult').item.json.file_name }}",
+        "emailType": "text",
+        "message": "=A new document was processed successfully.\n\nFile: {{ $('BuildResult').item.json.file_name }}\nSender/Company: {{ $('BuildResult').item.json.sender_or_company }}\nSummary: {{ $('BuildResult').item.json.summary }}\nRequested action: {{ $('BuildResult').item.json.requested_action }}\nDeadline: {{ $('BuildResult').item.json.deadline }}\nUrgency: {{ $('BuildResult').item.json.urgency }}\nDepartment: {{ $('BuildResult').item.json.department }}\nDrive link: {{ $('BuildResult').item.json.file_link }}",
+        "options": {}
+      },
+      "webhookId": "25a14445-bf56-4475-9a1b-27c5ca9d4837"
+    },
+    {
+      "id": "move1",
+      "name": "MoveToProcessed",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('New File in Incoming').item.json.id }}"
+        },
+        "driveId": {
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1LORFJgwyrPaFb_ztvPOUHolbep2cABEk"
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "RouteByType": {
+      "main": [
+        [
+          {
+            "node": "CopyAsGoogleDoc",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DownloadPdf",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DownloadTextFile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CopyAsGoogleDoc": {
+      "main": [
+        [
+          {
+            "node": "ExportConvertedText",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExportConvertedText": {
+      "main": [
+        [
+          {
+            "node": "DeleteTempCopy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeleteTempCopy": {
+      "main": [
+        [
+          {
+            "node": "SetTextDocx",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SetTextDocx": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DownloadPdf": {
+      "main": [
+        [
+          {
+            "node": "ExtractPdf",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractPdf": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DownloadTextFile": {
+      "main": [
+        [
+          {
+            "node": "ExtractText",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractText": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor": {
+      "main": [
+        [
+          {
+            "node": "BuildResult",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BuildResult": {
+      "main": [
+        [
+          {
+            "node": "AppendRow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AppendRow": {
+      "main": [
+        [
+          {
+            "node": "CheckUrgency",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CheckUrgency": {
+      "main": [
+        [
+          {
+            "node": "GmailUrgent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GmailNormal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New File in Incoming": {
+      "main": [
+        [
+          {
+            "node": "RouteByType",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GmailUrgent": {
+      "main": [
+        [
+          {
+            "node": "MoveToProcessed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GmailNormal": {
+      "main": [
+        [
+          {
+            "node": "MoveToProcessed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

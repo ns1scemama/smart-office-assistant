@@ -7,6 +7,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
+import { listDocuments, processDocument, recordReview, isSupported } from './mock.js';
 
 const app = express();
 app.use(cors());
@@ -20,9 +21,14 @@ const {
   N8N_SECRET,
   REQUEST_TIMEOUT_MS = '90000',
   PORT = '3001',
+  API_MODE,
 } = process.env;
 
 const timeoutMs = Number(REQUEST_TIMEOUT_MS);
+
+// Without a secret there is nothing to call, so answer from the local mock
+// instead of failing. A fresh clone therefore runs with no configuration.
+const useMock = API_MODE === 'mock' || !N8N_SECRET || !N8N_BASE_URL;
 
 async function forward(res, url, options) {
   const controller = new AbortController();
@@ -69,10 +75,21 @@ async function forward(res, url, options) {
 }
 
 app.get('/api/documents', (req, res) => {
+  if (useMock) return res.json(listDocuments());
   forward(res, `${N8N_BASE_URL}${N8N_DOCUMENTS_PATH}`, { method: 'GET' });
 });
 
 app.post('/api/process-document', (req, res) => {
+  if (useMock) {
+    if (!isSupported((req.body || {}).mime_type)) {
+      return res.status(400).json({
+        status: 'error',
+        error_code: 'UNSUPPORTED_FILE_TYPE',
+        message: 'Only PDF, DOCX and TXT files can be processed.',
+      });
+    }
+    return res.json(processDocument(req.body || {}));
+  }
   forward(res, `${N8N_BASE_URL}${N8N_PROCESS_PATH}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -81,6 +98,17 @@ app.post('/api/process-document', (req, res) => {
 });
 
 app.post('/api/review', (req, res) => {
+  if (useMock) {
+    const result = recordReview(req.body || {});
+    if (!result) {
+      return res.status(404).json({
+        status: 'error',
+        error_code: 'NOT_FOUND',
+        message: 'No document with this ID exists in the log.',
+      });
+    }
+    return res.json(result);
+  }
   forward(res, `${N8N_BASE_URL}${N8N_REVIEW_PATH}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -90,4 +118,7 @@ app.post('/api/review', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Proxy server listening on http://localhost:${PORT}`);
+  console.log(useMock
+    ? 'Mode: MOCK (no N8N_SECRET found, serving local sample data)'
+    : 'Mode: LIVE (forwarding to n8n)');
 });
