@@ -3,3 +3,7 @@ dist/
 .env
 _work/
 *.log
+
+# personal study material, not part of the submission
+PROJECT-EXPLAINED.html
+CODE-EXPLAINED.html
